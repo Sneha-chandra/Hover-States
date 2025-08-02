@@ -4,7 +4,7 @@ let tickets = [];
 let filteredTickets = [];
 
 // API Base URL - Change this to your Python backend URL
-const API_BASE_URL = 'http://192.168.1.17:5000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -16,9 +16,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Setup event listeners
 function setupEventListeners() {
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-    document.getElementById('registerForm').addEventListener('submit', handleRegister);
-    document.getElementById('createTicketForm').addEventListener('submit', handleCreateTicket);
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const createTicketForm = document.getElementById('createTicketForm');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
+    
+    if (createTicketForm) {
+        createTicketForm.addEventListener('submit', handleCreateTicket);
+    }
 }
 
 // Check if user is already authenticated
@@ -81,6 +93,8 @@ function switchTab(tab) {
     const registerForm = document.getElementById('registerForm');
     const tabs = document.querySelectorAll('.auth-tab');
     
+    if (!loginForm || !registerForm || !tabs.length) return;
+    
     tabs.forEach(t => t.classList.remove('active'));
     
     if (tab === 'login') {
@@ -119,7 +133,12 @@ async function handleLogin(e) {
             showDashboard();
             loadTickets();
         } else {
-            showAlert(data.message || 'Login failed', 'error');
+            // Check if it's a database connection error
+            if (data.message && data.message.includes('Database connection')) {
+                showAlert('Database connection failed. Please check your MongoDB installation or configuration.', 'error');
+            } else {
+                showAlert(data.message || 'Login failed', 'error');
+            }
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -151,7 +170,12 @@ async function handleRegister(e) {
             switchTab('login');
             document.getElementById('registerForm').reset();
         } else {
-            showAlert(data.message || 'Registration failed', 'error');
+            // Check if it's a database connection error
+            if (data.message && data.message.includes('Database connection')) {
+                showAlert('Database connection failed. Please check your MongoDB installation or configuration.', 'error');
+            } else {
+                showAlert(data.message || 'Registration failed', 'error');
+            }
         }
     } catch (error) {
         console.error('Registration error:', error);
@@ -161,11 +185,16 @@ async function handleRegister(e) {
 
 // Show dashboard
 function showDashboard() {
-    document.getElementById('authSection').style.display = 'none';
-    document.getElementById('dashboard').classList.add('active');
+    const authSection = document.getElementById('authSection');
+    const dashboard = document.getElementById('dashboard');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const userRole = document.getElementById('userRole');
     
-    document.getElementById('welcomeMessage').textContent = `Welcome back, ${currentUser.name}!`;
-    document.getElementById('userRole').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+    if (authSection) authSection.style.display = 'none';
+    if (dashboard) dashboard.classList.add('active');
+    
+    if (welcomeMessage) welcomeMessage.textContent = `Welcome back, ${currentUser.name}!`;
+    if (userRole) userRole.textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
 }
 
 // Load tickets
@@ -178,13 +207,20 @@ async function loadTickets() {
             }
         });
 
+        const data = await response.json();
+        
         if (response.ok) {
-            tickets = await response.json();
+            tickets = data;
             filteredTickets = [...tickets];
             displayTickets();
             updateStats();
         } else {
-            showAlert('Failed to load tickets', 'error');
+            // Check if it's a database connection error
+            if (data.message && data.message.includes('Database connection')) {
+                showAlert('Database connection failed. Please check your MongoDB installation or configuration.', 'error');
+            } else {
+                showAlert(data.message || 'Failed to load tickets', 'error');
+            }
         }
     } catch (error) {
         console.error('Error loading tickets:', error);
@@ -195,6 +231,8 @@ async function loadTickets() {
 // Display tickets
 function displayTickets() {
     const ticketsGrid = document.getElementById('ticketsGrid');
+    
+    if (!ticketsGrid) return;
     
     if (filteredTickets.length === 0) {
         ticketsGrid.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No tickets found.</p>';
@@ -226,7 +264,7 @@ function displayTickets() {
                 <button class="btn-sm btn-secondary" onclick="viewTicket('${ticket.id}')">
                     <i class="fas fa-eye"></i> View
                 </button>
-                ${currentUser.role !== 'user' ? `
+                ${currentUser && currentUser.role !== 'user' ? `
                     <button class="btn-sm" onclick="updateTicketStatus('${ticket.id}', 'In Progress')" 
                             ${ticket.status === 'In Progress' ? 'disabled' : ''}>
                         <i class="fas fa-play"></i> Start
@@ -246,26 +284,41 @@ function updateStats() {
     const total = tickets.length;
     const open = tickets.filter(t => t.status === 'Open').length;
     const resolved = tickets.filter(t => t.status === 'Resolved').length;
-    const assigned = tickets.filter(t => t.assigned_to?.id === currentUser.id).length;
+    let assigned = 0;
+    
+    if (currentUser) {
+        assigned = tickets.filter(t => t.assigned_to?.id === currentUser.id).length;
+    }
 
-    document.getElementById('totalTickets').textContent = total;
-    document.getElementById('openTickets').textContent = open;
-    document.getElementById('resolvedTickets').textContent = resolved;
-    document.getElementById('assignedTickets').textContent = assigned;
+    const totalTicketsEl = document.getElementById('totalTickets');
+    const openTicketsEl = document.getElementById('openTickets');
+    const resolvedTicketsEl = document.getElementById('resolvedTickets');
+    const assignedTicketsEl = document.getElementById('assignedTickets');
+
+    if (totalTicketsEl) totalTicketsEl.textContent = total;
+    if (openTicketsEl) openTicketsEl.textContent = open;
+    if (resolvedTicketsEl) resolvedTicketsEl.textContent = resolved;
+    if (assignedTicketsEl) assignedTicketsEl.textContent = assigned;
 }
 
 // Filter tickets
 function filterTickets() {
-    const statusFilter = document.getElementById('statusFilter').value;
-    const categoryFilter = document.getElementById('categoryFilter').value;
-    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    
+    if (!statusFilter || !categoryFilter || !searchFilter) return;
+
+    const statusValue = statusFilter.value;
+    const categoryValue = categoryFilter.value;
+    const searchValue = searchFilter.value.toLowerCase();
 
     filteredTickets = tickets.filter(ticket => {
-        const matchesStatus = !statusFilter || ticket.status === statusFilter;
-        const matchesCategory = !categoryFilter || ticket.category === categoryFilter;
-        const matchesSearch = !searchFilter || 
-            ticket.subject.toLowerCase().includes(searchFilter) ||
-            ticket.description.toLowerCase().includes(searchFilter);
+        const matchesStatus = !statusValue || ticket.status === statusValue;
+        const matchesCategory = !categoryValue || ticket.category === categoryValue;
+        const matchesSearch = !searchValue || 
+            (ticket.subject && ticket.subject.toLowerCase().includes(searchValue)) ||
+            (ticket.description && ticket.description.toLowerCase().includes(searchValue));
 
         return matchesStatus && matchesCategory && matchesSearch;
     });
@@ -275,7 +328,8 @@ function filterTickets() {
 
 // Open create ticket modal
 function openCreateTicketModal() {
-    document.getElementById('createTicketModal').classList.add('active');
+    const modal = document.getElementById('createTicketModal');
+    if (modal) modal.classList.add('active');
 }
 
 // Handle create ticket
@@ -283,14 +337,21 @@ async function handleCreateTicket(e) {
     e.preventDefault();
     
     const formData = new FormData();
-    formData.append('subject', document.getElementById('ticketSubject').value);
-    formData.append('category', document.getElementById('ticketCategory').value);
-    formData.append('description', document.getElementById('ticketDescription').value);
+    const subject = document.getElementById('ticketSubject');
+    const category = document.getElementById('ticketCategory');
+    const description = document.getElementById('ticketDescription');
+    const attachment = document.getElementById('ticketAttachment');
     
-    const attachment = document.getElementById('ticketAttachment').files[0];
-    if (attachment) {
-        formData.append('attachment', attachment);
+    if (subject) formData.append('subject', subject.value);
+    if (category) formData.append('category', category.value);
+    if (description) formData.append('description', description.value);
+    
+    if (attachment && attachment.files[0]) {
+        formData.append('attachment', attachment.files[0]);
     }
+
+    // Show loading state
+    showAlert('Creating ticket...', 'info');
 
     try {
         const token = localStorage.getItem('authToken');
@@ -302,14 +363,21 @@ async function handleCreateTicket(e) {
             body: formData
         });
 
+        const data = await response.json();
+
         if (response.ok) {
             showAlert('Ticket created successfully!', 'success');
             closeModal('createTicketModal');
-            document.getElementById('createTicketForm').reset();
+            const form = document.getElementById('createTicketForm');
+            if (form) form.reset();
             loadTickets();
         } else {
-            const error = await response.json();
-            showAlert(error.message || 'Failed to create ticket', 'error');
+            // Check if it's a database connection error
+            if (data.message && data.message.includes('Database connection')) {
+                showAlert('Database connection failed. Please check your MongoDB installation or configuration.', 'error');
+            } else {
+                showAlert(data.message || 'Failed to create ticket', 'error');
+            }
         }
     } catch (error) {
         console.error('Error creating ticket:', error);
@@ -318,98 +386,126 @@ async function handleCreateTicket(e) {
 }
 
 // View ticket details
-function viewTicket(ticketId) {
+async function viewTicket(ticketId) {
     const ticket = tickets.find(t => t.id === ticketId);
     if (!ticket) return;
 
-    document.getElementById('ticketDetailsTitle').innerHTML = `
-        <i class="fas fa-ticket-alt"></i> Ticket #${ticket.id}
-    `;
+    const ticketDetailsTitle = document.getElementById('ticketDetailsTitle');
+    const ticketDetailsContent = document.getElementById('ticketDetailsContent');
+    
+    if (ticketDetailsTitle) {
+        ticketDetailsTitle.innerHTML = `
+            <i class="fas fa-ticket-alt"></i> Ticket #${ticket.id}
+        `;
+    }
 
-    document.getElementById('ticketDetailsContent').innerHTML = `
-        <div style="margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h4>${ticket.subject}</h4>
-                <span class="ticket-status status-${ticket.status.toLowerCase().replace(' ', '-')}">${ticket.status}</span>
-            </div>
-            <p style="color: #666; margin-bottom: 10px;"><strong>Category:</strong> ${ticket.category}</p>
-            <p style="color: #666; margin-bottom: 10px;"><strong>Created by:</strong> ${ticket.created_by?.name}</p>
-            <p style="color: #666; margin-bottom: 10px;"><strong>Created on:</strong> ${formatDate(ticket.created_at)}</p>
-            ${ticket.assigned_to ? `<p style="color: #666; margin-bottom: 10px;"><strong>Assigned to:</strong> ${ticket.assigned_to.name}</p>` : ''}
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 15px 0;">
-                <strong>Description:</strong><br>
-                ${ticket.description}
-            </div>
-        </div>
-
-        ${currentUser.role !== 'user' ? `
+    if (ticketDetailsContent) {
+        ticketDetailsContent.innerHTML = `
             <div style="margin-bottom: 20px;">
-                <h5 style="margin-bottom: 10px;">Update Status:</h5>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-sm" onclick="updateTicketStatus('${ticket.id}', 'Open')" 
-                            ${ticket.status === 'Open' ? 'disabled' : ''}>Open</button>
-                    <button class="btn-sm" onclick="updateTicketStatus('${ticket.id}', 'In Progress')" 
-                            ${ticket.status === 'In Progress' ? 'disabled' : ''}>In Progress</button>
-                    <button class="btn-sm btn-secondary" onclick="updateTicketStatus('${ticket.id}', 'Resolved')" 
-                            ${ticket.status === 'Resolved' ? 'disabled' : ''}>Resolved</button>
-                    <button class="btn-sm btn-danger" onclick="updateTicketStatus('${ticket.id}', 'Closed')" 
-                            ${ticket.status === 'Closed' ? 'disabled' : ''}>Closed</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4>${ticket.subject}</h4>
+                    <span class="ticket-status status-${ticket.status.toLowerCase().replace(' ', '-')}">${ticket.status}</span>
+                </div>
+                <p style="color: #666; margin-bottom: 10px;"><strong>Category:</strong> ${ticket.category}</p>
+                <p style="color: #666; margin-bottom: 10px;"><strong>Created by:</strong> ${ticket.created_by?.name}</p>
+                <p style="color: #666; margin-bottom: 10px;"><strong>Created on:</strong> ${formatDate(ticket.created_at)}</p>
+                ${ticket.assigned_to ? `<p style="color: #666; margin-bottom: 10px;"><strong>Assigned to:</strong> ${ticket.assigned_to.name}</p>` : ''}
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 15px 0;">
+                    <strong>Description:</strong><br>
+                    ${ticket.description}
                 </div>
             </div>
-        ` : ''}
 
-        <div>
-            <h5 style="margin-bottom: 15px;">Replies (${ticket.replies?.length || 0})</h5>
-            <div id="repliesContainer">
-                ${ticket.replies?.map(reply => `
-                    <div style="background: white; border: 1px solid #e1e8ff; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <strong>${reply.user?.name || 'Unknown'}</strong>
-                            <small style="color: #666;">${formatDate(reply.created_at)}</small>
-                        </div>
-                        <p>${reply.message}</p>
+            ${currentUser && currentUser.role !== 'user' ? `
+                <div style="margin-bottom: 20px;">
+                    <h5 style="margin-bottom: 10px;">Update Status:</h5>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn-sm" onclick="updateTicketStatus('${ticket.id}', 'Open')" 
+                                ${ticket.status === 'Open' ? 'disabled' : ''}>Open</button>
+                        <button class="btn-sm" onclick="updateTicketStatus('${ticket.id}', 'In Progress')" 
+                                ${ticket.status === 'In Progress' ? 'disabled' : ''}>In Progress</button>
+                        <button class="btn-sm btn-secondary" onclick="updateTicketStatus('${ticket.id}', 'Resolved')" 
+                                ${ticket.status === 'Resolved' ? 'disabled' : ''}>Resolved</button>
+                        <button class="btn-sm btn-danger" onclick="updateTicketStatus('${ticket.id}', 'Closed')" 
+                                ${ticket.status === 'Closed' ? 'disabled' : ''}>Closed</button>
                     </div>
-                `).join('') || '<p style="color: #666; text-align: center; padding: 20px;">No replies yet.</p>'}
-            </div>
-            
-            <form onsubmit="addReply(event, '${ticket.id}')" style="margin-top: 20px;">
-                <div class="form-group">
-                    <label>Add Reply:</label>
-                    <textarea id="replyMessage" rows="3" placeholder="Type your reply..." required style="width: 100%; padding: 10px; border: 2px solid #e1e8ff; border-radius: 8px;"></textarea>
                 </div>
-                <button type="submit" class="btn-sm btn-secondary">
-                    <i class="fas fa-reply"></i> Reply
-                </button>
-            </form>
-        </div>
-    `;
+            ` : ''}
 
-    document.getElementById('ticketDetailsModal').classList.add('active');
+            <div>
+                <h5 style="margin-bottom: 15px;">Replies (${ticket.replies?.length || 0})</h5>
+                <div id="repliesContainer">
+                    ${ticket.replies?.map(reply => `
+                        <div style="background: white; border: 1px solid #e1e8ff; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong>${reply.user?.name || 'Unknown'}</strong>
+                                <small style="color: #666;">${formatDate(reply.created_at)}</small>
+                            </div>
+                            <p>${reply.message}</p>
+                        </div>
+                    `).join('') || '<p style="color: #666; text-align: center; padding: 20px;">No replies yet.</p>'}
+                </div>
+                
+                <form onsubmit="addReply(event, '${ticket.id}')" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Add Reply:</label>
+                        <textarea id="replyMessage-${ticket.id}" rows="3" placeholder="Type your reply..." required style="width: 100%; padding: 10px; border: 2px solid #e1e8ff; border-radius: 8px;"></textarea>
+                    </div>
+                    <button type="submit" class="btn-sm btn-secondary">
+                        <i class="fas fa-reply"></i> Reply
+                    </button>
+                </form>
+            </div>
+        `;
+    }
+
+    const modal = document.getElementById('ticketDetailsModal');
+    if (modal) modal.classList.add('active');
 }
 
 // Add reply to ticket
 async function addReply(e, ticketId) {
     e.preventDefault();
-    const message = document.getElementById('replyMessage').value;
+    const replyMessage = document.getElementById(`replyMessage-${ticketId}`);
     
-    // API call to add reply (assumed to exist)
-    // Here we're just updating the local state for demonstration
-    const ticket = tickets.find(t => t.id === ticketId);
-    if (!ticket) return;
-
-    const newReply = {
-        user: { name: currentUser.name, id: currentUser.id },
-        message: message,
-        created_at: new Date().toISOString()
-    };
-
-    if (!ticket.replies) ticket.replies = [];
-    ticket.replies.push(newReply);
-
-    document.getElementById('replyMessage').value = '';
-    viewTicket(ticketId); // Refresh the modal
-    displayTickets(); // Refresh the tickets display
-    showAlert('Reply added successfully!', 'success');
+    if (!replyMessage) return;
+    
+    const message = replyMessage.value;
+    
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showAlert('Authentication token not found. Please log in again.', 'error');
+            return;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/reply`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showAlert('Reply added successfully!', 'success');
+            replyMessage.value = '';
+            loadTickets(); // Reload tickets to show the new reply
+        } else {
+            // Check if it's a database connection error
+            if (data.message && data.message.includes('Database connection')) {
+                showAlert('Database connection failed. Please check your MongoDB installation or configuration.', 'error');
+            } else {
+                showAlert(data.message || 'Failed to add reply', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error adding reply:', error);
+        showAlert('Network error. Failed to connect to the server.', 'error');
+    }
 }
 
 // Update ticket status
@@ -420,24 +516,28 @@ async function updateTicketStatus(ticketId, newStatus) {
             showAlert('Authentication token not found. Please log in again.', 'error');
             return;
         }
-
+        
         const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/status`, {
-            method: 'PATCH',
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ status: newStatus })
         });
-
+        
+        const data = await response.json();
+        
         if (response.ok) {
-            showAlert('Ticket status updated successfully!', 'success');
-            closeModal('ticketDetailsModal');
-            loadTickets();
+            showAlert(`Ticket status updated to ${newStatus}`, 'success');
+            loadTickets(); // Reload tickets to show the updated status
         } else {
-            const error = await response.json();
-            showAlert(error.message || 'Failed to update ticket status. Please try again.', 'error');
-            console.error('API Error:', error);
+            // Check if it's a database connection error
+            if (data.message && data.message.includes('Database connection')) {
+                showAlert('Database connection failed. Please check your MongoDB installation or configuration.', 'error');
+            } else {
+                showAlert(data.message || 'Failed to update ticket status', 'error');
+            }
         }
     } catch (error) {
         console.error('Error updating ticket status:', error);
@@ -447,35 +547,36 @@ async function updateTicketStatus(ticketId, newStatus) {
 
 // Close modal
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('active');
+}
+
+// Show alert message
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alertContainer');
+    if (!alertContainer) return;
+    
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="alert-close">&times;</button>
+    `;
+    
+    alertContainer.appendChild(alert);
+    
+    // Remove alert after 5 seconds
+    setTimeout(() => {
+        if (alert.parentElement) {
+            alert.remove();
+        }
+    }, 5000);
 }
 
 // Format date
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-}
-
-// Show alert
-function showAlert(message, type) {
-    // Remove existing alerts
-    const existingAlert = document.querySelector('.alert');
-    if (existingAlert) {
-        existingAlert.remove();
-    }
-
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
-        ${message}
-    `;
-
-    document.body.insertBefore(alert, document.body.firstChild);
-
-    setTimeout(() => {
-        alert.remove();
-    }, 5000);
+    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
 }
 
 // Logout
@@ -486,33 +587,26 @@ function logout() {
     tickets = [];
     filteredTickets = [];
     
-    document.getElementById('authSection').style.display = 'flex';
-    document.getElementById('dashboard').classList.remove('active');
+    const dashboard = document.getElementById('dashboard');
+    const authSection = document.getElementById('authSection');
+    
+    if (dashboard) dashboard.classList.remove('active');
+    if (authSection) authSection.style.display = 'block';
     
     // Reset forms
-    document.getElementById('loginForm').reset();
-    document.getElementById('registerForm').reset();
-    switchTab('login');
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => form.reset());
     
-    showAlert('Logged out successfully!', 'info');
+    // Clear ticket display
+    const ticketsGrid = document.getElementById('ticketsGrid');
+    if (ticketsGrid) ticketsGrid.innerHTML = '';
+    
+    // Reset filters
+    const statusFilter = document.getElementById('statusFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    
+    if (statusFilter) statusFilter.value = '';
+    if (categoryFilter) categoryFilter.value = '';
+    if (searchFilter) searchFilter.value = '';
 }
-
-// Close modals when clicking outside
-window.onclick = function(event) {
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.classList.remove('active');
-        }
-    });
-}
-
-// Handle escape key to close modals
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        const activeModal = document.querySelector('.modal.active');
-        if (activeModal) {
-            activeModal.classList.remove('active');
-        }
-    }
-});

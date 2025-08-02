@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickDesk - Helpdesk System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="Style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-headset"></i> QuickDesk</h1>
+            <p>Your Modern Helpdesk Solution</p>
+            <div style="background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-top: 10px; border: 1px solid #ffeaa7;">
+                <strong>Important:</strong> This application requires MongoDB to be installed and running. 
+                Please ensure MongoDB is installed and running before using this application. 
+                See README.md for setup instructions.
+            </div>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <div class="auth-container">
+                <div class="auth-tabs">
+                    <div class="auth-tab active" onclick="switchTab('login')">Login</div>
+                    <div class="auth-tab" onclick="switchTab('register')">Register</div>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" class="auth-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="registerName">Full Name</label>
+                        <input type="text" id="registerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerRole">Role</label>
+                        <select id="registerRole" required>
+                            <option value="user">End User</option>
+                            <option value="agent">Support Agent</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-user-plus"></i> Register
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard" id="dashboard">
+            <!-- Dashboard Header -->
+            <div class="dashboard-header">
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <h2 id="welcomeMessage">Welcome back!</h2>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                    <button class="btn btn-danger" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-ticket-alt"></i></div>
+                    <div class="number" id="totalTickets">0</div>
+                    <div class="label">Total Tickets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-clock"></i></div>
+                    <div class="number" id="openTickets">0</div>
+                    <div class="label">Open Tickets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="number" id="resolvedTickets">0</div>
+                    <div class="label">Resolved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-user-tie"></i></div>
+                    <div class="number" id="assignedTickets">0</div>
+                    <div class="label">Assigned to Me</div>
+                </div>
+            </div>
+
+            <!-- Tickets Section -->
+            <div class="tickets-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-list"></i> Tickets</h3>
+                    <button class="btn btn-secondary" onclick="openCreateTicketModal()">
+                        <i class="fas fa-plus"></i> Create Ticket
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Status:</label>
+                        <select id="statusFilter" onchange="filterTickets()">
+                            <option value="">All Status</option>
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Category:</label>
+                        <select id="categoryFilter" onchange="filterTickets()">
+                            <option value="">All Categories</option>
+                            <option value="Technical">Technical</option>
+                            <option value="Billing">Billing</option>
+                            <option value="General">General</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Search:</label>
+                        <input type="text" id="searchFilter" placeholder="Search tickets..." onkeyup="filterTickets()">
+                    </div>
+                </div>
+
+                <!-- Tickets Grid -->
+                <div class="tickets-grid" id="ticketsGrid">
+                    <!-- Tickets will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Ticket Modal -->
+        <div class="modal" id="createTicketModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-plus"></i> Create New Ticket</h3>
+                    <button class="close-btn" onclick="closeModal('createTicketModal')">&times;</button>
+                </div>
+                <form id="createTicketForm">
+                    <div class="form-group">
+                        <label for="ticketSubject">Subject</label>
+                        <input type="text" id="ticketSubject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ticketCategory">Category</label>
+                        <select id="ticketCategory" required>
+                            <option value="Technical">Technical</option>
+                            <option value="Billing">Billing</option>
+                            <option value="General">General</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ticketDescription">Description</label>
+                        <textarea id="ticketDescription" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ticketAttachment">Attachment (optional)</label>
+                        <input type="file" id="ticketAttachment">
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-paper-plane"></i> Create Ticket
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Ticket Details Modal -->
+        <div class="modal" id="ticketDetailsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="ticketDetailsTitle">Ticket Details</h3>
+                    <button class="close-btn" onclick="closeModal('ticketDetailsModal')">&times;</button>
+                </div>
+                <div id="ticketDetailsContent">
+                    <!-- Ticket details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src = "scripts.js"></script>
+
+</body>
+</html>
