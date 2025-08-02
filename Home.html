@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hover Help Desk</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link href="Home.css" rel="stylesheet"/>
+</head>
+
+<body>
+  <header>
+    <div class="logo">Hover States QuickDesk</div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="home.html" class="active">Home</a></li>
+        <li><a href="index.html">Submit a Request</a></li>
+      </ul>
+      <div class="nav-icons">
+        <a href="index.html" title="Dashboard"><i class="fas fa-tachometer-alt"></i></a>
+        <i class="fas fa-bell" id="notification-bell" title="Notifications"></i>
+        <a href="index.html" title="User Profile"><i class="fas fa-user"></i></a>
+
+        <div class="notification-popup" id="notification-popup">
+          <h4>Recent Updates</h4>
+          <div id="notification-list"></div>
+        </div>
+      </div>
+      <a href="index.html" class="login-btn">Login</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Welcome to Hover States QuickDesk</h1>
+      <p>How can we assist you today?</p>
+      <input type="text" placeholder="Search articles or tickets..." />
+    </div>
+  </section>
+
+  <section class="light-section">
+    <div class="container">
+      <h2>Our Commitment to You</h2>
+      <p>
+        QuickDesk is a streamlined helpdesk ticket management system designed to simplify the way organizations handle support requests. It empowers employees, customers, and support agents to communicate effortlessly, ensuring faster issue resolution and better transparency.
+      </p>
+    </div>
+  </section>
+
+  <section id="video-section" class="video-container">
+    <div class="video-wrapper">
+      <video autoplay muted loop playsinline class="centered-video">
+        <source src="QuickDesk.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  </section>
+
+  <section class="faq-section">
+    <div class="container">
+      <h3>Got Any Questions</h3>
+      <h2>We've Got Answers</h2>
+      <div class="faq-grid">
+        <div class="faq-item">
+          <h4>How to raise a ticket?</h4>
+          <p class="answer">
+            To raise a new ticket, simply click on the "Submit a Request" link in the navigation bar. Fill out the form with a clear subject and detailed description of your issue, then click submit.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h4>What to do if our ticket is raised but no update?</h4>
+          <p class="answer">
+            If you haven't received an update on your ticket, please check your Dashboard. We recommend waiting a business day for a response. If the issue is urgent, you can reply to the existing ticket to add more information and notify our support team.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h4>Why is my withdrawal pending?</h4>
+          <p class="answer">
+            Withdrawals can be pending for various reasons, including security checks or bank processing times. Please allow 3-5 business days.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h4>How do I deposit funds?</h4>
+          <p class="answer">
+            You can deposit funds by navigating to the "Deposit" section in your account dashboard and choosing your preferred payment method.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Only notification popup logic remains
+    const notificationBell = document.getElementById('notification-bell');
+    const notificationPopup = document.getElementById('notification-popup');
+    const notificationList = document.getElementById('notification-list');
+
+    function showPopup(popupId) {
+      document.getElementById(popupId).style.display = 'block';
+    }
+
+    function closePopup(popupId) {
+      document.getElementById(popupId).style.display = 'none';
+    }
+
+    function renderNotifications() {
+      notificationList.innerHTML = '<p class="no-notifications">No new updates.</p>';
+      // Add your ticket updates here if needed
+    }
+
+    notificationBell.addEventListener('click', function () {
+      if (notificationPopup.style.display === 'block') {
+        closePopup('notification-popup');
+      } else {
+        renderNotifications();
+        showPopup('notification-popup');
+      }
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!notificationPopup.contains(event.target) && event.target !== notificationBell) {
+        notificationPopup.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
